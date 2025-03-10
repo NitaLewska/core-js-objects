@@ -1,3 +1,5 @@
+/* eslint-disable max-classes-per-file */
+/* eslint-disable class-methods-use-this */
 /* ************************************************************************************************
  *                                                                                                *
  * Please read the following tutorial before implementing tasks:                                   *
@@ -388,35 +390,115 @@ function group(array, keySelector, valueSelector) {
  *  For more examples see unit tests.
  */
 
-const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
-  },
+const cssSelectorBuilder = new (class CssBuilder {
+  constructor(baseString) {
+    this.baseString = baseString;
+  }
 
-  id(/* value */) {
-    throw new Error('Not implemented');
-  },
+  stringify() {
+    const string = this.baseString;
+    this.baseString = '';
+    return string;
+  }
 
-  class(/* value */) {
-    throw new Error('Not implemented');
-  },
+  element(value) {
+    return new (class CssElementBuilder extends CssBuilder {
+      element() {
+        throw new Error(
+          'Element, id and pseudo-element should not occur more then one time inside the selector'
+        );
+      }
+    })(this.baseString.concat(value));
+  }
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
-  },
+  id(value) {
+    return new (class CssElementBuilder extends CssBuilder {
+      element() {
+        throw new Error(
+          'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+        );
+      }
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
-  },
+      id() {
+        throw new Error(
+          'Element, id and pseudo-element should not occur more then one time inside the selector'
+        );
+      }
+    })(this.baseString.concat(String('#'.concat(value))));
+  }
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
-  },
+  class(value) {
+    return new (class CssElementBuilder extends CssBuilder {
+      id() {
+        throw new Error(
+          'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+        );
+      }
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
-  },
-};
+      element() {
+        throw new Error(
+          'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+        );
+      }
+    })(this.baseString.concat(String('.'.concat(value))));
+  }
+
+  attr(value) {
+    return new (class CssElementBuilder extends CssBuilder {
+      class() {
+        throw new Error(
+          'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+        );
+      }
+
+      element() {
+        throw new Error(
+          'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+        );
+      }
+    })(this.baseString.concat(`[${value}]`));
+  }
+
+  pseudoClass(value) {
+    return new (class CssElementBuilder extends CssBuilder {
+      attr() {
+        throw new Error(
+          'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+        );
+      }
+    })(this.baseString.concat(String(':'.concat(value))));
+  }
+
+  pseudoElement(value) {
+    return new (class CssElementBuilder extends CssBuilder {
+      pseudoElement() {
+        throw new Error(
+          'Element, id and pseudo-element should not occur more then one time inside the selector'
+        );
+      }
+
+      pseudoClass() {
+        throw new Error(
+          'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+        );
+      }
+
+      id() {
+        throw new Error(
+          'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+        );
+      }
+    })(this.baseString.concat(String('::'.concat(value))));
+  }
+
+  combine(selector1, combinator, selector2) {
+    return new CssBuilder(
+      this.baseString.concat(
+        `${selector1.stringify()} ${combinator} ${selector2.stringify()}`
+      )
+    );
+  }
+})('');
 
 module.exports = {
   shallowCopy,
